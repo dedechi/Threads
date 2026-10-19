@@ -13,16 +13,74 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <script>
-      // Gracefully ignore benign WebSocket HMR errors in cloud proxy / iframe sandboxes
-      window.addEventListener('unhandledrejection', function(event) {
-        if (event.reason && (
-          event.reason.message?.includes('WebSocket') ||
-          event.reason.message?.includes('vite:ws') ||
-          event.reason.message?.includes('createWebSocketModuleRunnerTransport')
-        )) {
-          event.preventDefault();
+      // Gracefully handle Vite HMR WebSocket in AI Studio cloud proxy & iframe environment
+      (function() {
+        if (typeof window === 'undefined') return;
+
+        // 1. Suppress any unhandled promise rejections related to WebSocket / HMR
+        window.addEventListener('unhandledrejection', function(event) {
+          if (event.reason && (
+            event.reason.message?.includes('WebSocket') ||
+            event.reason.message?.includes('vite:ws') ||
+            event.reason.message?.includes('createWebSocketModuleRunnerTransport')
+          )) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+        }, true);
+
+        // 2. Intercept 'vite-hmr' WebSocket to cleanly resolve without throwing
+        const NativeWebSocket = window.WebSocket;
+        if (!NativeWebSocket) return;
+
+        function ViteHmrSafeWebSocket(url, protocols) {
+          const isViteHmr = (Array.isArray(protocols) ? protocols.includes('vite-hmr') : protocols === 'vite-hmr') ||
+                            (typeof url === 'string' && (url.includes('vite-hmr') || url.includes(':24678')));
+
+          if (isViteHmr) {
+            const listeners = {};
+            const fakeSocket = {
+              readyState: 1, // WebSocket.OPEN
+              protocol: 'vite-hmr',
+              url: String(url),
+              addEventListener: function(event, cb) {
+                if (!listeners[event]) listeners[event] = [];
+                listeners[event].push(cb);
+                if (event === 'open') {
+                  setTimeout(function() {
+                    try { cb({ type: 'open', target: fakeSocket }); } catch (e) {}
+                  }, 0);
+                }
+              },
+              removeEventListener: function(event, cb) {
+                if (listeners[event]) {
+                  listeners[event] = listeners[event].filter(function(item) { return item !== cb; });
+                }
+              },
+              send: function() {},
+              close: function() {
+                fakeSocket.readyState = 3;
+                if (listeners['close']) {
+                  listeners['close'].forEach(function(cb) {
+                    try { cb({ type: 'close', wasClean: true, target: fakeSocket }); } catch (e) {}
+                  });
+                }
+              }
+            };
+            return fakeSocket;
+          }
+
+          return new NativeWebSocket(url, protocols);
         }
-      });
+
+        ViteHmrSafeWebSocket.prototype = NativeWebSocket.prototype;
+        ViteHmrSafeWebSocket.CONNECTING = NativeWebSocket.CONNECTING;
+        ViteHmrSafeWebSocket.OPEN = NativeWebSocket.OPEN;
+        ViteHmrSafeWebSocket.CLOSING = NativeWebSocket.CLOSING;
+        ViteHmrSafeWebSocket.CLOSED = NativeWebSocket.CLOSED;
+
+        window.WebSocket = ViteHmrSafeWebSocket;
+      })();
     </script>
   </head>
   <body class="bg-[#0b0c10] text-[#e2e8f0] antialiased selection:bg-purple-600 selection:text-white">
