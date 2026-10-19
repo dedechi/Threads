@@ -99,7 +99,9 @@ app.post('/api/generate-thread', async (req: Request, res: Response) => {
     }
 
     const finalLink = (affiliateLink && affiliateLink.trim()) ? affiliateLink.trim() : '[link produk di bio / keranjang]';
-    const targetLength = Math.min(Math.max(Number(threadLength) || 5, 5), 7);
+    const targetLength = Math.min(Math.max(Number(threadLength) || 1, 1), 7);
+    const targetAffiliateIndex = targetLength < 5 ? targetLength - 1 : 4;
+    const targetAffiliateNumber = targetAffiliateIndex + 1;
     const selectedTheme = THEME_INSTRUCTIONS[theme] || THEME_INSTRUCTIONS['edukasi'];
 
     if (!ai) {
@@ -111,7 +113,9 @@ app.post('/api/generate-thread', async (req: Request, res: Response) => {
           hookScore: 88,
           viralAngle: 'Relatable Storytelling & Honest Recommendation',
           hashtags: ['#RacunShopee', '#ThreadsViral', '#SpillProduk', '#AffiliateTrends'],
-          advice: 'Hook di utas 1 sudah dioptimalkan untuk menahan scroll pembaca 3 detik pertama.',
+          advice: targetLength < 5
+            ? `Link affiliasi ditempatkan pada Utas Ke-${targetAffiliateNumber}.`
+            : 'Hook di utas 1 sudah dioptimalkan untuk menahan scroll pembaca 3 detik pertama.',
           tokensUsed: 420,
           creditsCharged: 5,
         },
@@ -142,8 +146,14 @@ ${tone}
 PETUNJUK FORMAT UTAS & ATURAN MUTLAK (WAJIB DIPATUHI):
 1. Buat PERSIS ${targetLength} UTAS bersambung.
 2. Pisahkan setiap utas secara TEGAS dan HANYA menggunakan pemisah baris "---".
-3. WAJIB! Tempatkan Link Produk (${finalLink}) HANYA DAN PASTI pada UTAS KE-5 (post kelima). JANGAN PERNAH menaruh link produk pada utas 1, 2, 3, 4, 6, atau 7!
-4. Di Utas ke-5, buat kalimat pengantar link secara sangat natural, luwes, dan tidak terkesan spam (contoh: "yang mau samaan atau cek vouchernya, gue co di sini ya: ${finalLink}").
+3. WAJIB! ${
+  targetLength === 1
+    ? `Karena format ini hanya 1 UTAS (single post / tweet ringkas), buat hook yang langsung memikat, review ringkas 1-2 kalimat, dan tempatkan Link Produk (${finalLink}) di akhir utas.`
+    : targetLength < 5
+    ? `Karena format ini terdiri dari ${targetLength} utas, tempatkan Link Produk (${finalLink}) HANYA DAN PASTI pada UTAS KE-${targetAffiliateNumber} (utas penutup). JANGAN taruh link di utas sebelumnya!`
+    : `Tempatkan Link Produk (${finalLink}) HANYA DAN PASTI pada UTAS KE-5 (post kelima). JANGAN PERNAH menaruh link produk pada utas 1, 2, 3, 4, 6, atau 7!`
+}
+4. Di Utas ke-${targetAffiliateNumber}, buat kalimat pengantar link secara sangat natural, luwes, dan tidak terkesan spam (contoh: "yang mau samaan atau cek vouchernya, gue co di sini ya: ${finalLink}").
 5. Utas ke-1 WAJIB memiliki "Hook 3 Detik" yang kuat (membuat pembaca berhenti scroll).
 6. Gunakan spasi enter antar kalimat agar mudah dibaca di layar HP (mobile-friendly, tidak menumpuk seperti koran).
 7. Maksimal panjang tiap utas di bawah 450 karakter agar pas dengan limit Threads.
@@ -170,7 +180,7 @@ PETUNJUK FORMAT UTAS & ATURAN MUTLAK (WAJIB DIPATUHI):
     if (posts.length < targetLength) {
       // pad or fix
       while (posts.length < targetLength) {
-        if (posts.length === 4) {
+        if (posts.length === targetAffiliateIndex) {
           posts.push(`Btw buat yang nyari barang aslinya atau mau klaim diskonnya, linknya di sini ya:\n${finalLink}`);
         } else {
           posts.push(`Kalian ada yang udah pernah coba juga belum? Share pengalaman kalian di kolom balasan dong! 👇`);
@@ -180,14 +190,14 @@ PETUNJUK FORMAT UTAS & ATURAN MUTLAK (WAJIB DIPATUHI):
       posts = posts.slice(0, targetLength);
     }
 
-    // Double check affiliate link position (must be in post #5, index 4)
-    if (posts.length >= 5) {
-      if (!posts[4].includes(finalLink)) {
-        posts[4] = `${posts[4]}\n\nBtw link produknya di sini ya: ${finalLink}`;
+    // Double check affiliate link position
+    if (posts.length > targetAffiliateIndex) {
+      if (!posts[targetAffiliateIndex].includes(finalLink)) {
+        posts[targetAffiliateIndex] = `${posts[targetAffiliateIndex]}\n\nBtw link produknya di sini ya: ${finalLink}`;
       }
       // Remove link from other posts if model accidentally included it
       for (let i = 0; i < posts.length; i++) {
-        if (i !== 4 && posts[i].includes(finalLink)) {
+        if (i !== targetAffiliateIndex && posts[i].includes(finalLink)) {
           posts[i] = posts[i].replace(finalLink, '').trim();
         }
       }
@@ -217,7 +227,11 @@ PETUNJUK FORMAT UTAS & ATURAN MUTLAK (WAJIB DIPATUHI):
         hookScore: calculatedScore,
         viralAngle: selectedTheme.title,
         hashtags,
-        advice: 'Link affiliasi Anda berhasil diamankan khusus di Utas Ke-5 untuk menjaga retensi & reputasi akun.',
+        advice: targetLength === 1
+          ? 'Link affiliasi ditempatkan langsung di utas utama (Single Post).'
+          : targetLength < 5
+          ? `Link affiliasi berhasil ditempatkan pada Utas Ke-${targetAffiliateNumber}.`
+          : 'Link affiliasi Anda berhasil diamankan khusus di Utas Ke-5 untuk menjaga retensi & reputasi akun.',
         tokensUsed: 520,
         creditsCharged: 5,
       },
@@ -226,7 +240,7 @@ PETUNJUK FORMAT UTAS & ATURAN MUTLAK (WAJIB DIPATUHI):
     console.warn('Gemini API call failed, generating contextual fallback thread:', error?.message);
     const { productInfo, affiliateLink, theme = 'edukasi', tone = 'santai akrab (gue/lo, ngobrol)', threadLength = 5 } = req.body as GenerateThreadRequest;
     const finalLink = (affiliateLink && affiliateLink.trim()) ? affiliateLink.trim() : '[link produk di bio / keranjang]';
-    const targetLength = Math.min(Math.max(Number(threadLength) || 5, 5), 7);
+    const targetLength = Math.min(Math.max(Number(threadLength) || 1, 1), 7);
     const fallbackPosts = generateFallbackThread(productInfo || 'Produk Rekomendasi', finalLink, theme, tone, targetLength);
     res.json({
       posts: fallbackPosts,
@@ -234,7 +248,9 @@ PETUNJUK FORMAT UTAS & ATURAN MUTLAK (WAJIB DIPATUHI):
         hookScore: 89,
         viralAngle: 'Resilient Copywriting & Affiliate Retention',
         hashtags: ['#RacunThreads', '#SpillProduk', '#AffiliateIndonesia', '#TipsViral'],
-        advice: 'Link affiliasi Anda berhasil diamankan khusus di Utas Ke-5.',
+        advice: targetLength < 5
+          ? `Link affiliasi berhasil ditempatkan pada Utas Ke-${targetLength}.`
+          : 'Link affiliasi Anda berhasil diamankan khusus di Utas Ke-5.',
         tokensUsed: 460,
         creditsCharged: 5,
       },
@@ -247,7 +263,9 @@ app.post('/api/regenerate-post', async (req: Request, res: Response) => {
   try {
     const { postIndex, currentPost, threadContext, instruction, affiliateLink } = req.body;
     const finalLink = affiliateLink && affiliateLink.trim() ? affiliateLink.trim() : '[link produk di bio / keranjang]';
-    const isAffiliatePost = Number(postIndex) === 4;
+    const totalPosts = Array.isArray(threadContext) ? threadContext.length : 5;
+    const targetAffiliateIndex = totalPosts < 5 ? totalPosts - 1 : 4;
+    const isAffiliatePost = Number(postIndex) === targetAffiliateIndex;
 
     if (!ai) {
       return res.json({
@@ -270,7 +288,7 @@ Isi Utas saat ini:
 Instruksi khusus dari user:
 "${instruction || 'Buat lebih punchy, menarik, dan mobile friendly.'}"
 
-${isAffiliatePost ? `PENTING: Utas ini adalah Utas ke-5! WAJIB mencantumkan link produk ini secara halus: ${finalLink}` : `JANGAN sertakan link produk di utas ini!`}
+${isAffiliatePost ? `PENTING: Utas ini adalah slot link produk (Utas ke-${targetAffiliateIndex + 1})! WAJIB mencantumkan link produk ini secara halus: ${finalLink}` : `JANGAN sertakan link produk di utas ini!`}
 
 Berikan HANYA teks utas baru yang sudah direvisi, tanpa tanda kutip dan tanpa penjelasan meta.
 `;
@@ -362,6 +380,33 @@ function generateFallbackThread(
   tone: string,
   targetLength: number
 ): string[] {
+  if (targetLength === 1) {
+    return [
+      `Jujur kaget banget pas nyobain "${productInfo}"! Awalnya skeptis, tapi ternyata beneran worth it dan praktis banget buat sehari-hari.\n\nBuat yang mau cek promo atau diskon resminya, linknya di sini ya:\n${finalLink}`,
+    ];
+  }
+  if (targetLength === 2) {
+    return [
+      `Jangan buru-buru checkout "${productInfo}" sebelum tahu hal ini! 🧵👇\n\nBanyak yang salah cara pakainya padahal kalau paham fungsinya, hasilnya beneran memuaskan.`,
+      `Setelah seminggu pakai rutin, hasilnya kerasa banget dan praktis.\n\nYang mau ambil harga promo official store, linknya ada di sini ya:\n${finalLink}`,
+    ];
+  }
+  if (targetLength === 3) {
+    return [
+      `Jangan buru-buru checkout "${productInfo}" sebelum lo baca ini! 🧵👇\n\nGue tadinya skeptis karena lewat terus di fyp.`,
+      `Setelah pemakaian rutin, ternyata kualitasnya jauh di atas ekspektasi. Kualitasnya solid dan beneran ngebantu.`,
+      `Tips: pastiin ambil di toko resmi biar dapet garansi/keaslian & promo flash sale. Linknya gue taro di sini ya:\n${finalLink}`,
+    ];
+  }
+  if (targetLength === 4) {
+    return [
+      `Jangan buru-buru checkout "${productInfo}" sebelum lo baca thread ini! 🧵👇`,
+      `Masalah paling umum: sering kemakan tren tanpa tahu cara pakainya yang bener.`,
+      `Setelah nyobain sendiri selama 2 minggu, perbedaannya kerasa banget dan worth every penny.`,
+      `Buat yang nanya beli yang ori di mana, link tokonya ada di sini ya:\n${finalLink}`,
+    ];
+  }
+
   const posts: string[] = [];
 
   // Post 1: Hook
@@ -392,14 +437,21 @@ function generateFallbackThread(
   return posts;
 }
 
+import http from 'http';
+
 // Dev and Prod serving
 async function startServer() {
   const isProd = process.env.NODE_ENV === 'production';
+  const httpServer = http.createServer(app);
 
   if (!isProd) {
     const { createServer: createViteServer } = await import('vite');
+    const isHmrDisabled = process.env.DISABLE_HMR === 'true';
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: isHmrDisabled ? false : { server: httpServer },
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);
@@ -411,7 +463,7 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, () => {
+  httpServer.listen(PORT, () => {
     console.log(`[Thread Generator Ver.2 Server] running at http://localhost:${PORT}`);
   });
 }

@@ -21,7 +21,7 @@ export interface ToneOption {
   description: string;
 }
 
-export type ThreadLengthOption = 5 | 6 | 7;
+export type ThreadLengthOption = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 export interface ThreadPost {
   id: number;

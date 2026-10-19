@@ -39,7 +39,8 @@ export const ThreadsMobileMockup: React.FC<ThreadsMobileMockupProps> = ({
       <div className="space-y-0 relative">
         {posts.map((post, index) => {
           const isLast = index === posts.length - 1;
-          const isAffiliatePost = index === 4;
+          const affiliateIndex = posts.length < 5 ? posts.length - 1 : 4;
+          const isAffiliatePost = index === affiliateIndex;
 
           return (
             <div key={index} className="relative flex gap-3 group pt-2 pb-4">

@@ -26,6 +26,8 @@ interface ThreadResultsProps {
   onSaveToDrafts: () => void;
   isSaved: boolean;
   userCredits: number;
+  onShowToast?: (type: 'success' | 'error' | 'info', message: string) => void;
+  onOpenCreditModal?: () => void;
 }
 
 export const ThreadResults: React.FC<ThreadResultsProps> = ({
@@ -36,6 +38,8 @@ export const ThreadResults: React.FC<ThreadResultsProps> = ({
   onSaveToDrafts,
   isSaved,
   userCredits,
+  onShowToast,
+  onOpenCreditModal,
 }) => {
   const [viewMode, setViewMode] = useState<'editor' | 'preview'>('preview');
   const [copiedAll, setCopiedAll] = useState(false);
@@ -106,7 +110,12 @@ export const ThreadResults: React.FC<ThreadResultsProps> = ({
   // Handle regenerating a single post
   const handleExecuteRegenerate = async (index: number) => {
     if (userCredits < 1) {
-      alert('Kredit tidak mencukupi untuk regenerasi utas (membutuhkan 1 kredit).');
+      if (onShowToast) {
+        onShowToast('error', 'Kredit tidak mencukupi untuk regenerasi utas (membutuhkan 1 kredit).');
+      }
+      if (onOpenCreditModal) {
+        onOpenCreditModal();
+      }
       return;
     }
     setIsRegenerating(true);
@@ -122,7 +131,12 @@ export const ThreadResults: React.FC<ThreadResultsProps> = ({
   // Handle generating hooks
   const handleFetchHooks = async () => {
     if (userCredits < 1) {
-      alert('Kredit tidak mencukupi untuk variasi hook (membutuhkan 1 kredit).');
+      if (onShowToast) {
+        onShowToast('error', 'Kredit tidak mencukupi untuk variasi hook (membutuhkan 1 kredit).');
+      }
+      if (onOpenCreditModal) {
+        onOpenCreditModal();
+      }
       return;
     }
     setIsLoadingHooks(true);
@@ -327,7 +341,8 @@ export const ThreadResults: React.FC<ThreadResultsProps> = ({
         /* Editor Cards List */
         <div className="space-y-3.5">
           {posts.map((postContent, index) => {
-            const isAffiliatePost = index === 4;
+            const affiliateIndex = posts.length < 5 ? posts.length - 1 : 4;
+            const isAffiliatePost = index === affiliateIndex;
             const charCount = postContent.length;
             const isOverLimit = charCount > 500;
             const isEditing = editingIndex === index;
@@ -357,7 +372,7 @@ export const ThreadResults: React.FC<ThreadResultsProps> = ({
 
                     {isAffiliatePost && (
                       <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400">
-                        ⚡ Slot Link Affiliate
+                        ⚡ Slot Link Affiliate ({posts.length < 5 ? (posts.length === 1 ? 'Utas Utama' : `Utas #${affiliateIndex + 1}`) : 'Utas Ke-5'})
                       </span>
                     )}
                   </div>
@@ -489,7 +504,7 @@ export const ThreadResults: React.FC<ThreadResultsProps> = ({
 
                     {isAffiliatePost && (
                       <span className="text-[10px] text-emerald-400 font-medium">
-                        ✓ Link aman di utas #5
+                        ✓ Link aman di {posts.length < 5 ? (posts.length === 1 ? 'utas utama' : `utas #${affiliateIndex + 1}`) : 'utas #5'}
                       </span>
                     )}
                   </div>

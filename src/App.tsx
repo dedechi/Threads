@@ -330,6 +330,8 @@ export default function App() {
                 onSaveToDrafts={handleSaveToDrafts}
                 isSaved={isCurrentThreadSaved}
                 userCredits={creditState.balance}
+                onShowToast={addToast}
+                onOpenCreditModal={() => setIsCreditModalOpen(true)}
               />
             ) : (
               /* Empty Placeholder State with Affiliator Selling Points */

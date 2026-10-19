@@ -205,7 +205,11 @@ export const GeneratorForm: React.FC<GeneratorFormProps> = ({
             <span className="text-[10px] text-zinc-400 font-normal">(Opsional)</span>
           </label>
           <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
-            Ditaruh di Utas #5
+            {threadLength === 1
+              ? 'Ditaruh di Utas #1'
+              : threadLength < 5
+              ? `Ditaruh di Utas #${threadLength}`
+              : 'Ditaruh di Utas #5'}
           </span>
         </div>
         <input
@@ -219,7 +223,9 @@ export const GeneratorForm: React.FC<GeneratorFormProps> = ({
           <CheckCircle className="w-3 h-3 shrink-0" />
           <span>
             {isAffiliateLinkFilled
-              ? 'Link affiliasi aktif akan disisipkan secara halus di post ke-5.'
+              ? `Link affiliasi aktif akan disisipkan di ${
+                  threadLength === 1 ? 'utas ini' : `utas ke-${threadLength < 5 ? threadLength : 5}`
+                }.`
               : 'Jika dikosongkan, AI akan otomatis menggunakan default: "[link produk di bio / keranjang]".'}
           </span>
         </div>
@@ -307,8 +313,12 @@ export const GeneratorForm: React.FC<GeneratorFormProps> = ({
             onChange={(e) => setThreadLength(Number(e.target.value) as ThreadLengthOption)}
             className="w-full px-3 py-2.5 rounded-xl bg-zinc-900/90 border border-zinc-700/80 hover:border-zinc-600 focus:border-purple-500 text-xs text-zinc-100 outline-none transition-all cursor-pointer font-medium"
           >
+            <option value={1}>1 Utas (Single Post / Quick Spill)</option>
+            <option value={2}>2 Utas (Mini Utas - Link di #2)</option>
+            <option value={3}>3 Utas (Ringkas - Link di #3)</option>
+            <option value={4}>4 Utas (Story Pendek - Link di #4)</option>
             <option value={5}>5 Utas (Standar - Link di #5)</option>
-            <option value={6}>6 Utas (Link di #5)</option>
+            <option value={6}>6 Utas (Menengah - Link di #5)</option>
             <option value={7}>7 Utas (Maksimal - Link di #5)</option>
           </select>
         </div>
