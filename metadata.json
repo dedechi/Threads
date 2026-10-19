@@ -1,0 +1,6 @@
+{
+  "name": "Thread Generator Ver.2",
+  "description": "Aplikasi internal AI untuk affiliator: buat utas Threads viral, terstruktur, dengan penempatan link otomatis dan pelacak sisa kredit pemakaian.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
