@@ -80,3 +80,16 @@ export interface ProductPreset {
   recommendedTheme: ThemeKey;
   recommendedTone: ToneKey;
 }
+
+export interface ErrorDetail {
+  title: string;
+  message: string;
+  statusCode?: number;
+  statusText?: string;
+  endpoint?: string;
+  code?: string;
+  detail?: string;
+  suggestion?: string;
+  timestamp: number;
+}
+
